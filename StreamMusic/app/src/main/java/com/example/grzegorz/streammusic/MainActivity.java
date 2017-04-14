@@ -1,40 +1,54 @@
 package com.example.grzegorz.streammusic;
 
+import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.media.AudioManager;
-import android.media.MediaPlayer;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.RadioButton;
+import android.widget.Toast;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends Activity {
 
-    BluetoothAdapter bluetoothAdapter = null;
+    RadioButton chWysylaj = null;
+    RadioButton chOdbieraj = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
+        this.runBluetooth();
+        chWysylaj = (RadioButton)findViewById(R.id.chWysylaj);
+        chOdbieraj = (RadioButton)findViewById(R.id.chOdbieraj);
+
+//        dajSieWykryc();
+//        wykryjInne();
+    }
+
+    void runBluetooth(){
+        BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if(!bluetoothAdapter.isEnabled()){
             Intent intent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(intent, 1);
         }
-//        dajSieWykryc();
-//        wykryjInne();
-        new ServerBluetooth(this).run();
     }
 
     public void Bplay(View v){
-        MediaPlayer mediaPlayer = new MediaPlayer();
-        mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+        if (chWysylaj.isChecked()){
+            new ServerBluetooth(this).run();
+        }
+        else if (chOdbieraj.isChecked()){
+            new ClientBluetooth("60:A4:4C:C3:2C:6A", this).run();//NEXUS 60:A4:4C:C3:2C:6A  SONY BC:6E:64:B5:C1:45  LG 98:D6:F7:C9:98:45
+        }
+        else {
+            Toast.makeText(this, "Nie wybrano funkcjonalnosci urzadzenia", Toast.LENGTH_LONG).show();
+        }
     }
 
     public void dajSieWykryc(){
@@ -48,6 +62,18 @@ public class MainActivity extends AppCompatActivity {
         this.registerReceiver(odbiorca, filter);
         BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         bluetoothAdapter.startDiscovery();
+    }
+
+    public void chWysylajClick(View v){
+        if (chOdbieraj.isChecked()){
+            chOdbieraj.setChecked(false);
+        }
+    }
+
+    public void chOdbierajClick(View v){
+        if (chWysylaj.isChecked()){
+            chWysylaj.setChecked(false);
+        }
     }
 
     private final BroadcastReceiver odbiorca = new BroadcastReceiver() {
