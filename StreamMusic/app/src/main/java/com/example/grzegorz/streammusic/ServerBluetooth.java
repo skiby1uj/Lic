@@ -14,6 +14,9 @@ import java.util.UUID;
  * Created by grzegorz on 23.03.17.
  */
 
+//todo wysylanie w oddzielnym watku
+//todo sprawdzic czy da sie zrobic dwa polaczenia z jednym urzadzeniem
+
 public class ServerBluetooth extends Thread {
     private static BluetoothServerSocket serverSocket;
     private BluetoothAdapter bluetoothAdapter;
@@ -53,7 +56,7 @@ public class ServerBluetooth extends Thread {
             Log.e("INFO", "Zaczynam wysylanie");
             try {
                 ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
-                InputStream inputStream = context.getResources().openRawResource(R.raw.biegnij);
+                InputStream inputStream = context.getResources().openRawResource(R.raw.kult);
 
                 int len;
                 byte[] buf = new byte[1024];

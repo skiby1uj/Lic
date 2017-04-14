@@ -19,16 +19,17 @@ import java.util.UUID;
  * Created by grzegorz on 23.03.17.
  */
 
+//TODO Sprobowac dac play() w nowym watku, moze nie bedzie zauwazalna przerwa
+//TODO odbieranie tez musi byc w oddzielnym watku zeby nie blokowac ekranu
+
 public class ClientBluetooth extends Thread {
     private final BluetoothSocket socket;
     private BluetoothAdapter bluetoothAdapter;
     private Context context;
     private Queue <Queue<byte[]> > queueBuff;
-    MediaPlayer[] arrMediaPlayer;
 
     public ClientBluetooth(String mac, Context context){
         this.context = context;
-        arrMediaPlayer = new MediaPlayer[2];
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         BluetoothDevice bluetoothDevice = bluetoothAdapter.getRemoteDevice(mac);
         BluetoothSocket tmp = null;
@@ -66,66 +67,58 @@ public class ClientBluetooth extends Thread {
 
     private void playMp3(InputStream inputStream)
     {
-        try
-        {
-            int mod = 0;
+        int mod = 0;
+        int len = 0;
+        int licz = 0;
+        byte[] buf = new byte[1024];
+        Queue<byte[]> queueByte = new LinkedList<>();
+        LinkedList<MediaPlayer> list = new LinkedList<>();
+        MediaPlayer mediaPlayer;
 
-            byte[] buf = new byte[1024];
-            int len = 0;
-            int licz = 0;
-            Queue<byte[]> queueByte = new LinkedList<>();
-            arrMediaPlayer[0] = new MediaPlayer();
-            arrMediaPlayer[1] = new MediaPlayer();
+        try {
+            while ((len = inputStream.read(buf)) != -1){
 
-            try {
-                    while ((len = inputStream.read(buf)) != -1){
-                        queueByte.add(buf);
-                        licz++;
-                        buf = new byte[1024];
+                queueByte.add(buf);
+                licz++;
+                buf = new byte[1024];
 
-                        if(licz == 500){
-                            licz = 0;
-                            queueBuff.add(queueByte);
-                            queueByte = new LinkedList<>();
-                        }
-
-                        while (!queueBuff.isEmpty()) {
-                            File path=new File(context.getCacheDir()+"/musicfile"+mod+".3gp");
-                            FileOutputStream fos = new FileOutputStream(path);
-                            Queue<byte[]> tmp = queueBuff.poll();
-                            while (!tmp.isEmpty()) {
-                                byte[] tmpByte = tmp.poll();
-                                fos.write(tmpByte, 0, tmpByte.length);
-                            }
-                            arrMediaPlayer[mod].reset();
-                            arrMediaPlayer[mod].setDataSource(path.toString());
-                            arrMediaPlayer[mod].prepare();
-
-                            while (true){
-                                if(!arrMediaPlayer[(mod+1)%2].isPlaying()){
-                                    arrMediaPlayer[mod].start();
-                                    break;
-                                }
-                            }
-
-                            mod++;
-                            if (mod == 2){
-                                mod = 0;
-                            }
-                        }
-                        Log.e("loop", licz + " " + len);
-                    }
-                    inputStream.close();
-            }catch (Exception e){
-                Log.e("ERROR 3", e+"");
-                if(!queueByte.isEmpty()){
+                if(licz == 500){
+                    licz = 0;
                     queueBuff.add(queueByte);
+                    queueByte = new LinkedList<>();
                 }
+
+                while (!queueBuff.isEmpty()) {
+                    File path=new File(context.getCacheDir()+"/musicfile"+mod+".3gp");
+                    FileOutputStream fos = new FileOutputStream(path);
+                    Queue<byte[]> tmp = queueBuff.poll();
+                    while (!tmp.isEmpty()) {
+                        byte[] tmpByte = tmp.poll();
+                        fos.write(tmpByte, 0, tmpByte.length);
+                    }
+                    fos.close();
+
+                    mediaPlayer = new MediaPlayer();
+                    mediaPlayer.setDataSource(context.getCacheDir()+"/musicfile"+mod+".3gp");
+                    mediaPlayer.prepare();
+                    list.add(mediaPlayer);
+
+                    if (mod > 0){
+                        list.get(mod-1).setNextMediaPlayer(list.get(mod));
+                        if (mod == 1){
+                            list.getFirst().start();
+                        }
+                    }
+                    mod++;
+                }
+                Log.e("loop", licz + " " + len);
             }
-        }
-        catch (Exception ex)
-        {
-            ex.printStackTrace();
+            inputStream.close();
+        }catch (Exception e){
+            Log.e("ERROR", e+"");
+            if(!queueByte.isEmpty()){
+                queueBuff.add(queueByte);
+            }
         }
     }
 }
