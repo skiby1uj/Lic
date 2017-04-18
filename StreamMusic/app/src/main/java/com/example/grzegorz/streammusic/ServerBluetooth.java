@@ -7,14 +7,15 @@ import android.content.Context;
 import android.util.Log;
 
 import java.io.InputStream;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.nio.ByteBuffer;
 import java.util.UUID;
 
 /**
  * Created by grzegorz on 23.03.17.
  */
 
-//todo wysylanie w oddzielnym watku
 //todo sprawdzic czy da sie zrobic dwa polaczenia z jednym urzadzeniem
 
 public class ServerBluetooth extends Thread {
@@ -42,6 +43,7 @@ public class ServerBluetooth extends Thread {
     public void run(){
         Log.e("INFO", "Uruchamiam serwer");
         BluetoothSocket socket = null;
+        int odp;
         try{
             Log.e("INFO", "Czekam na poloczenie");
             bluetoothAdapter.cancelDiscovery();
@@ -56,7 +58,8 @@ public class ServerBluetooth extends Thread {
             Log.e("INFO", "Zaczynam wysylanie");
             try {
                 ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
-                InputStream inputStream = context.getResources().openRawResource(R.raw.kult);
+                ObjectInputStream ooi = new ObjectInputStream(socket.getInputStream());
+                InputStream inputStream = context.getResources().openRawResource(R.raw.biegnij);
 
                 int len;
                 byte[] buf = new byte[1024];
@@ -68,6 +71,18 @@ public class ServerBluetooth extends Thread {
                     if (licz == 500){
                         licz = 0;
                         oos.flush();
+
+                        byte[] odpByte = new byte[ComunicationClientServer.sizeOfResponse];
+                        Log.e("INFO", "Chce czytac od clienta");
+                        if (ooi.read(odpByte) != -1){
+                            Log.e("INFO", "odpowiedz klienta : " + odpByte[0] + " " + odpByte[1]);
+                            if (ComunicationClientServer.checkResponse(ComunicationClientServer.nextPack, odpByte)){
+                                Log.e("Info", "Udalo sie odebrac odp i jest taka sama");
+                            }
+                        }else {
+                            Log.e("ERROR", "Cos poszlo nie tak nie udalo sie odczytac odp clienta");
+                        }
+                        Log.e("INFO", "Odczytalem od clienta");
                     }
                 }
                 oos.flush();

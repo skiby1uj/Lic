@@ -41,10 +41,14 @@ public class MainActivity extends Activity {
 
     public void Bplay(View v){
         if (chWysylaj.isChecked()){
-            new ServerBluetooth(this).run();
+            Thread t = new ServerBluetooth(this);
+            t.start();
+//            new ServerBluetooth(this).run();
         }
         else if (chOdbieraj.isChecked()){
-            new ClientBluetooth("60:A4:4C:C3:2C:6A", this).run();//NEXUS 60:A4:4C:C3:2C:6A  SONY BC:6E:64:B5:C1:45  LG 98:D6:F7:C9:98:45
+            Thread t = new ClientBluetooth("60:A4:4C:C3:2C:6A", this);
+            t.start();
+//            new ClientBluetooth("60:A4:4C:C3:2C:6A", this).run();//NEXUS 60:A4:4C:C3:2C:6A  SONY BC:6E:64:B5:C1:45  LG 98:D6:F7:C9:98:45
         }
         else {
             Toast.makeText(this, "Nie wybrano funkcjonalnosci urzadzenia", Toast.LENGTH_LONG).show();
