@@ -6,19 +6,28 @@ import android.app.Dialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.Button;
+import android.widget.ListView;
 import android.widget.RadioButton;
 import android.widget.Toast;
 
-public class MainActivity extends Activity {
+import java.util.LinkedList;
 
+public class MainActivity extends Activity implements AdapterView.OnItemClickListener{
+
+    LinkedList<ListMusicRow> list = new LinkedList<>();
     RadioButton chWysylaj = null;
     RadioButton chOdbieraj = null;
     Button bPlay = null;
@@ -30,14 +39,45 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
 
         this.onCreateDialog(savedInstanceState, this).show();
-        Log.e("INFO", "What is this: " + isServer);
         this.runBluetooth();
         chWysylaj = (RadioButton)findViewById(R.id.chWysylaj);
         chOdbieraj = (RadioButton)findViewById(R.id.chOdbieraj);
+        chOdbieraj.setEnabled(false);
+        chWysylaj.setEnabled(false);
         bPlay = (Button) findViewById(R.id.button);
-
 //        dajSieWykryc();
 //        wykryjInne();
+    }
+
+    public void showMusic(){
+
+        ListMusicAdapter listMusicAdapter;
+        ContentResolver cr = this.getContentResolver();
+        ListView listV = (ListView)findViewById(R.id.listViewMusic);
+
+        Uri uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
+        String selection = MediaStore.Audio.Media.IS_MUSIC + "!= 0";
+        String sortOrder = MediaStore.Audio.Media.TITLE + " ASC";
+        Cursor cur = cr.query(uri, null, selection, null, sortOrder);
+
+        if(cur != null)
+        {
+            if(cur.getCount() > 0)
+            {
+                while(cur.moveToNext())
+                {
+                    int idx = cur.getColumnIndex(MediaStore.Audio.Media.DATA);
+                    String title = cur.getString(cur.getColumnIndex(MediaStore.Audio.Media.TITLE));
+                    String path = cur.getString(idx);
+                    list.add(new ListMusicRow(title, path));
+                }
+                listMusicAdapter = new ListMusicAdapter(this, R.layout.row_music_element, list);
+                listV.setOnItemClickListener(this);
+                listV.setAdapter(listMusicAdapter);
+            }
+        }
+
+        cur.close();
     }
 
     public Dialog onCreateDialog(Bundle savedInstanceState, final Context context) {
@@ -47,10 +87,9 @@ public class MainActivity extends Activity {
                 .setPositiveButton("Wysyłać", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
                         // FIRE ZE MISSILES!
+                        showMusic();
                         isServer = true;
                         chWysylaj.setChecked(true);
-                        chWysylaj.setEnabled(false);
-                        chOdbieraj.setEnabled(false);
                     }
                 })
                 .setNegativeButton("Odbierać", new DialogInterface.OnClickListener() {
@@ -58,11 +97,10 @@ public class MainActivity extends Activity {
                         // User cancelled the dialog
                         isServer = false;
                         chOdbieraj.setChecked(true);
-                        chOdbieraj.setEnabled(false);
-                        chWysylaj.setEnabled(false);
                     }
                 });
         // Create the AlertDialog object and return it
+
         return builder.create();
     }
 
@@ -76,11 +114,12 @@ public class MainActivity extends Activity {
 
     public void Bplay(View v){
         if (chWysylaj.isChecked()){
-            Thread t = new ServerBluetooth(this);
-            t.start();
+//            Thread t = new ServerBluetooth(this);
+//            t.start();
+
         }
         else if (chOdbieraj.isChecked()){
-            new ClientBluetooth("60:A4:4C:C3:2C:6A", this);
+            new ClientBluetooth("BC:6E:64:B5:C1:45", this);
 //            t.start();
             //NEXUS 60:A4:4C:C3:2C:6A  SONY BC:6E:64:B5:C1:45  LG 98:D6:F7:C9:98:45
         }
@@ -125,4 +164,12 @@ public class MainActivity extends Activity {
             }
         }
     };
+
+    @Override
+    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+        Toast.makeText(this, "" + list.get(position).getTitle(), Toast.LENGTH_LONG).show();
+        Log.e("INFo", "inClick");
+        Thread t = new ServerBluetooth(this, list.get(position).getPath());
+        t.start();
+    }
 }

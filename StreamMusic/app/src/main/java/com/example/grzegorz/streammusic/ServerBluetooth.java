@@ -6,10 +6,10 @@ import android.bluetooth.BluetoothSocket;
 import android.content.Context;
 import android.util.Log;
 
-import java.io.InputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.nio.ByteBuffer;
 import java.util.UUID;
 
 /**
@@ -22,13 +22,13 @@ public class ServerBluetooth extends Thread {
     private static BluetoothServerSocket serverSocket;
     private BluetoothAdapter bluetoothAdapter;
     private Context context;
+    private String path;
 
-    public ServerBluetooth(Context context){
+    public ServerBluetooth(Context context, String path){
         this.context = context;
+        this.path = path;
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         BluetoothServerSocket tmp = null;
-//        File f = new File(Environment.getExternalStorageDirectory() + "/Music/biegnij.mp3");
-//        long len = f.length();
 
         try{
             UUID uuid = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
@@ -59,7 +59,7 @@ public class ServerBluetooth extends Thread {
             try {
                 ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
                 ObjectInputStream ooi = new ObjectInputStream(socket.getInputStream());
-                InputStream inputStream = context.getResources().openRawResource(R.raw.biegnij);
+                FileInputStream inputStream = new FileInputStream(new File(path));
 
                 int len;
                 byte[] buf = new byte[1024];
@@ -96,4 +96,6 @@ public class ServerBluetooth extends Thread {
         }
     }
 }
+
+
 
