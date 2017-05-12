@@ -6,23 +6,38 @@ import android.util.Log;
  * Created by grzegorz on 18.04.17.
  */
 
-public class ComunicationClientServer {
-    static final int sizeOfResponse = 2;
-    static final byte[] nextPack = {0, 0};// prosze wyslac kolejna paczke danych
-    static final byte[] pasue = {0, 1};// klient wcisnal pause czekamy co dalej
-    static final byte[] resetSong = {1, 0};// klient chce piosenke od poczatku
-    static final byte[] changeSong = {1, 1};// zmiana piosenki, nie wysylaj wiecej obecnej
+public class ComunicationClientServer{
+    static final int sizeOfResponse = 3;
+    static final byte[] nextPack = {0, 0, 0};// prosze wyslac kolejna paczke danych
+    static final byte[] pasue = {0, 0, 1};// pause czekamy co dalej
+    static final byte[] resetSong = {0, 1, 0};// klient chce piosenke od poczatku
+    static final byte[] changeSong = {0, 1, 1};// zmiana piosenki, nie wysylaj wiecej obecnej
+    static final byte[] play = {1, 0, 0};//muzyka gra
+    static final byte[] lastPackage = {1, 0, 1};//ostatnia paczka z piosenka
+    private static byte[] status = null;
 
     public static boolean checkResponse(byte[] expected, byte [] response){
+        if (response == null){
+            return false;
+        }
         if(expected.length != response.length){
             return false;
         }
         for(int i = 0; i < expected.length; i++){
-            Log.e("Check", i + "");
+//            Log.e("Check", i + "");
             if (expected[i] != response[i]){
                 return false;
             }
         }
         return true;
+    }
+
+
+    public static void setStatus(byte[] newStatus){
+        status = newStatus;
+    }
+
+    public static byte[] getStatus(){
+        return status;
     }
 }

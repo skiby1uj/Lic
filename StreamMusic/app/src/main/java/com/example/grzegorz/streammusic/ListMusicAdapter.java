@@ -6,6 +6,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import java.util.LinkedList;
@@ -38,6 +39,7 @@ public class ListMusicAdapter extends ArrayAdapter<ListMusicRow> {
                 holder = new ListMusicHolder();
                 holder.title = (TextView)row.findViewById(R.id.titleMusic);
                 holder.path = (TextView)row.findViewById(R.id.pathMusic);
+//                holder.photo = (ImageView)row.findViewById(R.id.imageVplay);
 
                 row.setTag(holder);
             }else{
@@ -47,6 +49,7 @@ public class ListMusicAdapter extends ArrayAdapter<ListMusicRow> {
             ListMusicRow object = data.get(position);
             holder.title.setText(object.getTitle());
             holder.path.setText(object.getPath());
+//            holder.photo.setImageResource(R.drawable.play);
 
             return  row;
     }
@@ -55,5 +58,6 @@ public class ListMusicAdapter extends ArrayAdapter<ListMusicRow> {
     static class ListMusicHolder{
         TextView title;
         TextView path;
+//        ImageView photo;
     }
 }

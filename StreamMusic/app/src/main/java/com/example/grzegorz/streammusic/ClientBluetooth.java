@@ -21,43 +21,96 @@ import java.util.UUID;
 
 public class ClientBluetooth{
     private final BluetoothSocket socket;
+    private final BluetoothSocket socket2;
     private BluetoothAdapter bluetoothAdapter;
     private Context context;
+    ComunicationWithServer comunicationWithServer = null;
     private LinkedList<MediaPlayer> arrMediaPlayer = new LinkedList<>();
+    private playMediaPlayer playMediaPlayer;
+    private byte[] comunicationClientServer;
+    private download d;
 
     public ClientBluetooth(String mac, Context context){
         this.context = context;
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         BluetoothDevice bluetoothDevice = bluetoothAdapter.getRemoteDevice(mac);
+        bluetoothDevice.fetchUuidsWithSdp();
         BluetoothSocket tmp = null;
+        BluetoothSocket tmp2 = null;
+        comunicationClientServer = null;
         try{
             UUID uuid = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
+            UUID uuid2 = UUID.fromString("54d1cc90-1169-11e2-892e-0800200c9a66");
             Log.e("device", bluetoothDevice+"");
             tmp = bluetoothDevice.createRfcommSocketToServiceRecord(uuid);
+            tmp2 = bluetoothDevice.createRfcommSocketToServiceRecord(uuid2);
         }catch (Exception e){
             Log.e("ERROR 1", e+"");
         }
         Log.e("tmp", tmp+"");
         this.socket = tmp;
-        bluetoothConnect();
+        this.socket2 = tmp2;
+        while(bluetoothConnect(socket) == false){}
+        while(bluetoothConnect(socket2) == false){}
+        comunicationWithServer = new ComunicationWithServer(socket2);
+
         try {
-            download d = new download(socket);
+            d = new download(socket);
             d.start();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    private void bluetoothConnect(){
+    private boolean bluetoothConnect(BluetoothSocket socket){
             Log.e("INFO", "Proba polaczenia");
             bluetoothAdapter.cancelDiscovery();
             try{
                 socket.connect();
                 Log.e("INFO", "Serwer zaakceptowal");
+                return true;
             }catch (IOException e){
                 Log.e("Error Connect", "Nie udalo sie polaczyc z serverem");
                 e.printStackTrace();
+                return false;
             }
+    }
+
+    private class ComunicationWithServer extends Thread{
+        private BluetoothSocket socket;
+        private ObjectInputStream ois;
+
+        public ComunicationWithServer(BluetoothSocket socket){
+            this.socket = socket;
+            try {
+                this.ois = new ObjectInputStream(socket.getInputStream());
+                this.start();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        public void run(){
+            if (this.socket.isConnected()){
+                while (true){
+                    try {
+                        byte[] odpByte = new byte[ComunicationClientServer.sizeOfResponse];
+                        if (ois.read(odpByte) != -1){
+                            if(ComunicationClientServer.checkResponse(ComunicationClientServer.lastPackage, odpByte)){//ostatnia paczka
+                                d.lastPackage = true;
+                                d.sizeLastPackage = ois.readInt();
+                            }else {
+                                comunicationClientServer = odpByte;
+                                Log.e("asfd", "odczytalem od servera");
+                            }
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+
     }
 
         private class download extends Thread{
@@ -69,6 +122,8 @@ public class ClientBluetooth{
             FileOutputStream fos = null;
             public ObjectInputStream ois;
             public ObjectOutputStream oos;
+            public boolean lastPackage;
+            public int sizeLastPackage;
 
             public download(BluetoothSocket sock) throws IOException {
                 path = new File(context.getCacheDir()+"/musicfile"+mod+".3gp");
@@ -78,6 +133,7 @@ public class ClientBluetooth{
                     oos = new ObjectOutputStream(sock.getOutputStream());
                 }
                 buf = new byte[1024];
+                lastPackage = false;
                 Log.e("INFO", "Konstruktor download");
             }
 
@@ -98,7 +154,9 @@ public class ClientBluetooth{
                             if (mod >= 1){
                                 arrMediaPlayer.get(mod-1).setNextMediaPlayer(arrMediaPlayer.get(mod));
                                 if (mod == 2){
-                                    new playMediaPlayer().start();
+                                    playMediaPlayer = new playMediaPlayer();
+                                    playMediaPlayer.start();
+//                                    new playMediaPlayer().start();
                                 }
                             }
                             Log.e("INFO", "Pisze do servera");
@@ -109,11 +167,28 @@ public class ClientBluetooth{
                             mod++;
                             path = new File(context.getCacheDir()+"/musicfile"+mod+".3gp");
                             fos = new FileOutputStream(path);
+                        }else if(lastPackage && sizeLastPackage == licz){//ostatnia paczka todo do optymalizacji ten syf!!!
+                            Log.e("PackageLast", "Last package");
+                            licz = 0;
+                            fos.close();
+                            MediaPlayer mp = new MediaPlayer();
+                            mp.setDataSource(path.toString());
+                            mp.prepare();
+                            arrMediaPlayer.add(mp);
+                            if (mod >= 1){
+                                arrMediaPlayer.get(mod-1).setNextMediaPlayer(arrMediaPlayer.get(mod));
+                                if (mod < 2){
+                                    playMediaPlayer = new playMediaPlayer();
+                                    playMediaPlayer.start();
+                                }
+                            }
+                            arrMediaPlayer.add((MediaPlayer)null);//oznaczenie konca piosenki
+                            break;
                         }
                     }
+                    Log.e("Koniec petli", "Koniec petli");
                 } catch (IOException e) {
                     e.printStackTrace();
-                    arrMediaPlayer.add((MediaPlayer)null);
                 }
             }
         }
@@ -128,19 +203,24 @@ public class ClientBluetooth{
             public void run() {
                 int tmp;
                 while (true){
-                    tmp = ktoryGra(isPlaying);
-                    if (tmp == -1){//nic nie gra
-                        if (arrMediaPlayer.size() > isPlaying){//czy jest cos jeszcze na liscie? jak nie to znaczy ze czyta bo na koncu musi byc null
-                            if (arrMediaPlayer.get(isPlaying+1) == null){//jesli nie ma to koniec
-                                break;
-                            }else {//jesli jest co puscic to play
-                                isPlaying++;
-                                arrMediaPlayer.get(isPlaying).start();
+                    if (ComunicationClientServer.checkResponse(ComunicationClientServer.play, comunicationClientServer)){
+                        tmp = ktoryGra(isPlaying);
+                        if (tmp == -1){//nic nie gra
+                            if (arrMediaPlayer.size() > isPlaying+1){//czy jest cos jeszcze na liscie? jak nie to znaczy ze czyta bo na koncu musi byc null
+                                if (arrMediaPlayer.get(isPlaying+1) == null){//jesli nie ma to koniec
+                                    break;
+                                }else {//jesli jest co puscic to play
+                                    isPlaying++;
+                                    if (!arrMediaPlayer.get(isPlaying).isPlaying())
+                                        arrMediaPlayer.get(isPlaying).start();
+                                }
                             }
                         }
-                    }
-                    else {
-                        isPlaying = tmp;
+                        else {
+                            isPlaying = tmp;
+                        }
+                    }else if (ComunicationClientServer.checkResponse(ComunicationClientServer.pasue, comunicationClientServer) && arrMediaPlayer.get(isPlaying).isPlaying()){
+                        arrMediaPlayer.get(isPlaying).pause();
                     }
                 }
             }
