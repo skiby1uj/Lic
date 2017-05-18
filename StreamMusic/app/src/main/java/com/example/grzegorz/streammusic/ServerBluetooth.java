@@ -17,6 +17,7 @@ import android.widget.Toast;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -28,45 +29,65 @@ import java.util.UUID;
  */
 
 public class ServerBluetooth extends Thread implements AdapterView.OnItemClickListener {
-    private static BluetoothServerSocket serverSocket;
-    private BluetoothServerSocket serverSocket2;
-    BluetoothSocket socket;
-    private BluetoothAdapter bluetoothAdapter;
+    private BluetoothSocket socket;
     private Context context;
     private String path;
     private int isPlayingId;
-    private static byte[] comunicationClientServer;//przerzucic to do klasy ComunicationWithClient
-    private Thread t;
-    LinkedList<ListMusicRow> listMusic = new LinkedList<>();
-    ComunicationWithClient comunicationWithClient = null;
+    private Thread threadSendMusic;
+    private LinkedList<ListMusicRow> listMusic;
+    private ComunicationWithClient comunicationWithClient;
+    private ObjectOutputStream oos;
+    private ObjectInputStream ooi;
+    private FileInputStream inputStream;
 
-    public ServerBluetooth(Context context/*, String path*/){
+    public ServerBluetooth(Context context){
+        Log.i("INFO", "Poczatek konstruktora ServerBluetooth");
+        socket = null;
         this.context = context;
         this.path = null;
-        this.comunicationClientServer = null;
-        this.t = null;
+        this.threadSendMusic = null;
+        this.listMusic = new LinkedList<>();
+        this.comunicationWithClient = null;
+        this.oos = null;
+        this.ooi = null;
+        this.inputStream = null;
         connetClient();
+        try {
+            ooi = new ObjectInputStream(this.socket.getInputStream());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        Log.i("INFO", "Koniec konstruktora ServerBluetooth");
     }
 
     public void connetClient(){
-        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        Log.i("INFO", "Poczatek connectClient");
+        BluetoothServerSocket sendMusicServerSocket = null; //wysylanie daynch
+        BluetoothServerSocket comunicationWithClientServerSocket = null;
+        BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         try{
             UUID uuid = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
             UUID uuid2 = UUID.fromString("54d1cc90-1169-11e2-892e-0800200c9a66");
-            serverSocket = bluetoothAdapter.listenUsingRfcommWithServiceRecord("usluga witajaca", uuid);
-            serverSocket2 = bluetoothAdapter.listenUsingRfcommWithServiceRecord("usluga witajaca", uuid2);
+            sendMusicServerSocket = bluetoothAdapter.listenUsingRfcommWithServiceRecord("usluga witajaca", uuid);
+            comunicationWithClientServerSocket = bluetoothAdapter.listenUsingRfcommWithServiceRecord("usluga witajaca", uuid2);
 
-            Log.e("tmp", serverSocket+"");
         }catch (Exception e){
             Log.e("ERROR", e+"");
         }
         try{
-            Log.e("INFO", "Czekam na poloczenie");
+            Log.i("INFO", "Czekam na poloczenie sendMusicServerSocket");
             bluetoothAdapter.cancelDiscovery();
-            socket = serverSocket.accept();
-            comunicationWithClient = new ComunicationWithClient(serverSocket2.accept());
+            socket = sendMusicServerSocket.accept();
+            if (socket != null){
+                Log.i("INFO", "Udalo sie nawiazac polaczenie w sendMusicServerSocket");
+                oos = new ObjectOutputStream(this.socket.getOutputStream());
+            }else {
+                Log.i("INFO", "Nie udalo sie nawiazac polaczenia w sendMusicServerSocket");
+            }
+            Log.i("INFO", "Czekam na poloczenie comunicationWithClientServerSocket");
+            comunicationWithClient = new ComunicationWithClient(comunicationWithClientServerSocket.accept());
+            Log.i("INFO", "Udalo się poloczenie comunicationWithClientServerSocket");
             Toast.makeText(context, "Udalo sie nawiazac polaczenie", Toast.LENGTH_LONG).show();
-            Log.e("`INFO", socket+"");
 
         }catch (Exception e){
             Log.e("ERROR", "Cos poszlo nie tak przy polaczeniu" + e);
@@ -74,7 +95,6 @@ public class ServerBluetooth extends Thread implements AdapterView.OnItemClickLi
     }
 
     public void showMusic(ListView listView){//ToDo przebudowac aby pokazywalo tylko mp3 albo zrobic konwersje na mp3
-
         ListMusicAdapter listMusicAdapter;
         ContentResolver cr = context.getContentResolver();
 
@@ -104,7 +124,70 @@ public class ServerBluetooth extends Thread implements AdapterView.OnItemClickLi
         cur.close();
     }
 
-    private class ComunicationWithClient extends Thread{
+    @Override
+    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+        ImageView imageView = (ImageView) parent.getChildAt(position).findViewById(R.id.imageVplay);
+
+        if (this.path == listMusic.get(position).getPath()){//path sie rownaja, znaczy to tez ze cos juz gralo/gra
+            if (comunicationWithClient.status == ComunicationClientServer.play){//to na co kliknolem gra wiec pause
+                comunicationWithClient.status = ComunicationClientServer.pasue;
+                Toast.makeText(context, "Pause", Toast.LENGTH_LONG).show();
+                imageView.setImageResource(R.drawable.play);
+            }else if (comunicationWithClient.status == ComunicationClientServer.pasue) {//to w co kliknolem jest pause, uruchom to
+                comunicationWithClient.status = ComunicationClientServer.play;
+                Toast.makeText(context, "Play", Toast.LENGTH_LONG).show();
+                imageView.setImageResource(R.drawable.pause);
+            }
+            comunicationWithClient.run();
+        }else {//path sa rozne
+            if (this.path == null){//czyli jeszcze nic nie gralo bo path pusty
+                comunicationWithClient.status = ComunicationClientServer.play;
+                imageView.setImageResource(R.drawable.pause);
+                this.path = listMusic.get(position).getPath();
+                try {
+                    inputStream = new FileInputStream(new File(path));
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                }
+                this.isPlayingId = position;
+                Toast.makeText(context, "First PLay", Toast.LENGTH_LONG).show();
+                if (threadSendMusic == null){
+                    threadSendMusic = new sendMusic();
+                    threadSendMusic.start();
+                }
+                comunicationWithClient.run();
+            }
+            else {//zmiana piosenki
+                //ToDo dopisac obsluge zmiany piosenki
+                ImageView lastImageView = (ImageView) parent.getChildAt(this.isPlayingId).findViewById(R.id.imageVplay);
+                lastImageView.setImageDrawable(null);
+                imageView.setImageResource(R.drawable.pause);
+                this.path = listMusic.get(position).getPath();
+                this.isPlayingId = position;
+                comunicationWithClient.status = ComunicationClientServer.changeSong;
+                try {
+                    threadSendMusic.join();
+
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                comunicationWithClient.run();
+                try {
+                    inputStream = new FileInputStream(new File(path));
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                }
+                threadSendMusic.interrupt();
+                comunicationWithClient.status = ComunicationClientServer.play;
+                threadSendMusic = new sendMusic();
+                threadSendMusic.start();
+
+            }
+        }
+    }
+
+    private static class ComunicationWithClient extends Thread{
+        private static byte[] status;
         private ObjectOutputStream oos;
         public boolean lastPackage;
         public int sizeLastPackage;
@@ -122,12 +205,14 @@ public class ServerBluetooth extends Thread implements AdapterView.OnItemClickLi
         public void run(){
             try {
                 if (lastPackage){
+                    Log.i("INFO", "Wysylam informacje do klienta o ostatnim package");
                     oos.write(ComunicationClientServer.lastPackage);
                     oos.flush();
                     oos.writeInt(sizeLastPackage);
                     oos.flush();
                 }else {
-                    oos.write(comunicationClientServer);
+                    Log.i("INFO" , "Wysylam do klienta: " + status[0] + "" + status[1] + "" + status[2]);
+                    oos.write(status);
                     oos.flush();
                 }
             } catch (IOException e) {
@@ -136,87 +221,56 @@ public class ServerBluetooth extends Thread implements AdapterView.OnItemClickLi
         }
     }
 
-    @Override
-    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-        ImageView imageView = (ImageView) parent.getChildAt(position).findViewById(R.id.imageVplay);
-
-        if (this.path == listMusic.get(position).getPath()){//path sie rownaja, znaczy to tez ze cos juz gralo/gra
-            if (comunicationClientServer == ComunicationClientServer.play){//to na co kliknolem gra wiec pause
-                comunicationClientServer = ComunicationClientServer.pasue;
-                Toast.makeText(context, "Pause", Toast.LENGTH_LONG).show();
-                imageView.setImageResource(R.drawable.play);
-            }else if (comunicationClientServer == ComunicationClientServer.pasue) {//to w co kliknolem jest pause, uruchom to
-                comunicationClientServer = ComunicationClientServer.play;
-                Toast.makeText(context, "Play", Toast.LENGTH_LONG).show();
-                imageView.setImageResource(R.drawable.pause);
-            }
-        }else {//path sa rozne
-            if (this.path == null){//czyli jeszcze nic nie gralo bo path pusty
-                comunicationClientServer = ComunicationClientServer.play;
-                imageView.setImageResource(R.drawable.pause);
-                this.path = listMusic.get(position).getPath();
-                this.isPlayingId = position;
-                Toast.makeText(context, "First PLay", Toast.LENGTH_LONG).show();
-                if (t == null){
-                    t = this;
-                    t.start();
-                }
-            }
-            else {//zmiana piosenki
-                //ToDo dopisac obsluge zmiany piosenki
-            }
-        }
-        comunicationWithClient.run();
-    }
-
-    public void run(){
-        Log.e("INFO", "Uruchamiam serwer");
+    private class sendMusic extends Thread{
+        public void run(){
+            Log.i("INFO", "Watek sendMusic zostal uruchomiony");
 
 
-        if(socket != null){
-            Log.e("INFO", "Zaczynam wysylanie");
-            //while (true){
-            ObjectOutputStream oos = null;
+            if(socket != null){
+                Log.i("INFO", "Zaczynam wysylanie");
+                //while (true){
                 try {
-                    oos = new ObjectOutputStream(socket.getOutputStream());
-                    ObjectInputStream ooi = new ObjectInputStream(socket.getInputStream());
-                    FileInputStream inputStream = new FileInputStream(new File(path));
 
                     int len;
                     byte[] buf = new byte[1024];
                     int licz = 0;
-                    while ((len = inputStream.read(buf)) != -1) {
+                    while ((len = inputStream.read(buf)) != -1 && !ComunicationClientServer.checkResponse(ComunicationClientServer.changeSong, comunicationWithClient.status)) {
                         licz++;
                         oos.write(buf, 0, len);
-                        Log.e("loop", licz+"");
+                        Log.i("loop", licz+"");
                         if (licz == 500){
                             licz = 0;
                             oos.flush();
 
                             byte[] odpByte = new byte[ComunicationClientServer.sizeOfResponse];
-                            Log.e("INFO", "Chce czytac od clienta");
+                            Log.i("INFO", "Chce czytac od clienta");
                             if (ooi.read(odpByte) != -1){
-                                Log.e("INFO", "odpowiedz klienta : " + odpByte[0] + " " + odpByte[1]);
+                                Log.i("INFO", "Odpowiedz klienta: " + odpByte[0] + "" + odpByte[1] + "" + odpByte[2]);
                                 if (ComunicationClientServer.checkResponse(ComunicationClientServer.nextPack, odpByte)){
-                                    Log.e("Info", "Udalo sie odebrac odp i jest taka sama");
+                                    Log.i("Info", "Klient chce kolejna paczke");
                                 }
                             }else {
                                 Log.e("ERROR", "Cos poszlo nie tak nie udalo sie odczytac odp clienta");
                             }
-                            Log.e("INFO", "Odczytalem od clienta");
 
-                            while(comunicationClientServer == ComunicationClientServer.pasue){}
+                            while(comunicationWithClient.status == ComunicationClientServer.pasue){
+                                sleep(500);
+                            }
                         }
                     }
-                    oos.flush();
+                    if(!ComunicationClientServer.checkResponse(ComunicationClientServer.changeSong, comunicationWithClient.status)){//zmiana piosenki więc nie wysylamy
+                        oos.flush();
+                        comunicationWithClient.lastPackage = true;
+                        comunicationWithClient.sizeLastPackage = licz;
+                        comunicationWithClient.run();
+                        comunicationWithClient.lastPackage = false;
+                        comunicationWithClient.status = null;
+                    }
                     inputStream.close();
-                    comunicationWithClient.lastPackage = true;
-                    comunicationWithClient.sizeLastPackage = licz;
-                    comunicationWithClient.run();
-                    comunicationWithClient.lastPackage = false;
+
 //                    oos.close();//TODO NIE CHCE TU ZRYWAC POLACZENIA, CHCE MIEC JE STAŁE?
 
-                    Log.e("INFO", "Koniec polaczenia");
+                    Log.i("INFO", "Koniec watku sendMusic");
                 }catch (Exception e){
                     Log.e("ERROR", e+"");
                     try {
@@ -225,7 +279,8 @@ public class ServerBluetooth extends Thread implements AdapterView.OnItemClickLi
                         e1.printStackTrace();
                     }
                 }
-            //}
+                //}
+            }
         }
     }
 }

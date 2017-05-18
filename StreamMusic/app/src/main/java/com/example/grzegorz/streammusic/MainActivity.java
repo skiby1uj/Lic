@@ -29,9 +29,8 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
     RadioButton chOdbieraj = null;
     Button bPlay = null;
     String adressMac = null;
-    int positionMac = -1;
+    int lastSelectionPositionMac = -1;
     Context context = null;
-    Thread t = null;
     ListView listViewMusic = null;
 
     @Override
@@ -71,7 +70,6 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
                     dajSieWykryc();//nie blokuje ekranu :)
                     ServerBluetooth serverBluetooth = new ServerBluetooth(context);
                     serverBluetooth.showMusic(listViewMusic);
-                    t = serverBluetooth;
                     Toast.makeText(context, "Udalo sie polaczyc z klientem", Toast.LENGTH_LONG).show();
                 }
                 else if (chOdbieraj.isChecked()){//klient
@@ -184,25 +182,22 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
 
     @Override
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-        if (chOdbieraj.isChecked()) {
             bPlay.setEnabled(true);
             if (adressMac == null) {
                 parent.getChildAt(position).setBackgroundColor(Color.BLUE);
-                positionMac = position;
+                lastSelectionPositionMac = position;
                 TextView w = (TextView) parent.getChildAt(position).findViewById(R.id.textAdressDevice);
                 adressMac = w.getText().toString();
             }
             if (adressMac != null) {
-                parent.getChildAt(positionMac).setBackgroundColor(Color.WHITE);
+                parent.getChildAt(lastSelectionPositionMac).setBackgroundColor(Color.WHITE);
                 parent.getChildAt(position).setBackgroundColor(Color.BLUE);
-                positionMac = position;
+                lastSelectionPositionMac = position;
                 TextView w = (TextView) parent.getChildAt(position).findViewById(R.id.textAdressDevice);
                 adressMac = w.getText().toString();
             }
             //TODO ZROBIC KOLOROWANIE WYBRANEGO ELEMENTU I PRZEKAZYWANIE GO DO KONSTRUKTORÓW
             Toast.makeText(context, "Wybrano " + listDeviceConnectRows.get(position).getName(), Toast.LENGTH_LONG).show();
-        } else {
 
-        }
     }
 }
