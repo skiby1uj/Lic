@@ -228,7 +228,6 @@ public class ServerBluetooth extends Thread implements AdapterView.OnItemClickLi
 
             if(socket != null){
                 Log.i("INFO", "Zaczynam wysylanie");
-                //while (true){
                 try {
 
                     int len;
@@ -264,11 +263,8 @@ public class ServerBluetooth extends Thread implements AdapterView.OnItemClickLi
                         comunicationWithClient.sizeLastPackage = licz;
                         comunicationWithClient.run();
                         comunicationWithClient.lastPackage = false;
-                        comunicationWithClient.status = null;
                     }
                     inputStream.close();
-
-//                    oos.close();//TODO NIE CHCE TU ZRYWAC POLACZENIA, CHCE MIEC JE STAŁE?
 
                     Log.i("INFO", "Koniec watku sendMusic");
                 }catch (Exception e){
@@ -279,7 +275,6 @@ public class ServerBluetooth extends Thread implements AdapterView.OnItemClickLi
                         e1.printStackTrace();
                     }
                 }
-                //}
             }
         }
     }

@@ -224,6 +224,7 @@ public class ClientBluetooth extends Thread{
                                 Log.i("INFO", "Dodano ostatnia paczke do piosenki");
                                 arrMediaPlayer.add((MediaPlayer)null);
                                 sizeOfPackage = ComunicationClientServer.sizeOfPackage;
+                                lastPackage = false;
                             }
                             licz = 0;
                             mod++;
@@ -234,7 +235,6 @@ public class ClientBluetooth extends Thread{
                                 //todo trzeba by to jakos poprawic zeby nie czekac do odebrania calej paczki, da się czyscic jakos objectInputStream?
                                 Log.e("INFO", "Zmiana odbieranej piosenki");
                                 try {
-//                                Log.i("INFO", "Wyczyszczono inpotStream, usunieto " + objectInputStream.skipBytes(1024  * (sizeOfPackage-licz)) + " byte");
                                     playMediaPlayer.join();
                                 } catch (InterruptedException e) {
                                     Log.e("ERROR", "Join rzucil blad w download");
@@ -283,7 +283,12 @@ public class ClientBluetooth extends Thread{
                                     return;
                                 }
                                 Log.i("INFO", "Cos jeszcze powinno być na liscie wiec pewnie jest pobierane");
-                                //todo zrobic to sleep?
+                                try {
+                                    sleep(500);
+                                } catch (InterruptedException e) {
+                                    Log.e("ERROR", "Sleep rzucil blad w PlayMediaPlayer");
+                                    e.printStackTrace();
+                                }
                             }
                         }
                         else {
@@ -299,8 +304,8 @@ public class ClientBluetooth extends Thread{
                             arrMediaPlayer.get(isPlaying).stop();
                             Log.i("INFO", "Muzyka zostala zatrzymana w ze względu na zmianę piosenki");
                             Log.i("INFO", "Koniec watku playMediaPlayer");
-                            return;
                         }
+                        return;
                     }
                 }
             }
