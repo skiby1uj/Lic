@@ -7,6 +7,7 @@ package com.example.grzegorz.streammusic;
 public class ListMusicRow {
     private String title;
     private String path;
+    public int raw;
 
     public ListMusicRow(){};
 
@@ -21,5 +22,13 @@ public class ListMusicRow {
 
     public String getPath(){
         return this.path;
+    }
+
+    public int getRaw(){
+        return this.raw;
+    }
+
+    public void setRaw(int raw){
+        this.raw = raw;
     }
 }

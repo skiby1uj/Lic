@@ -27,6 +27,10 @@ public class ListMusicAdapter extends ArrayAdapter<ListMusicRow> {
         this.data = data;
     }
 
+    public ListMusicRow getItem(int index){
+        return this.data.get(index);
+    }
+
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
             View row = convertView;
@@ -39,7 +43,7 @@ public class ListMusicAdapter extends ArrayAdapter<ListMusicRow> {
                 holder = new ListMusicHolder();
                 holder.title = (TextView)row.findViewById(R.id.titleMusic);
                 holder.path = (TextView)row.findViewById(R.id.pathMusic);
-//                holder.photo = (ImageView)row.findViewById(R.id.imageVplay);
+                holder.photo = (ImageView)row.findViewById(R.id.imageVplay);
 
                 row.setTag(holder);
             }else{
@@ -49,7 +53,7 @@ public class ListMusicAdapter extends ArrayAdapter<ListMusicRow> {
             ListMusicRow object = data.get(position);
             holder.title.setText(object.getTitle());
             holder.path.setText(object.getPath());
-//            holder.photo.setImageResource(R.drawable.play);
+            holder.photo.setImageResource(object.getRaw());
 
             return  row;
     }
@@ -58,6 +62,6 @@ public class ListMusicAdapter extends ArrayAdapter<ListMusicRow> {
     static class ListMusicHolder{
         TextView title;
         TextView path;
-//        ImageView photo;
+        ImageView photo;
     }
 }

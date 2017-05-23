@@ -14,6 +14,7 @@ public class ComunicationClientServer{
     static final byte[] changeSong = {0, 1, 1};// zmiana piosenki, nie wysylaj wiecej obecnej
     static final byte[] play = {1, 0, 0};//muzyka gra
     static final byte[] lastPackage = {1, 0, 1};//ostatnia paczka z piosenka
+    static final byte[] musicFinish = {1, 1, 0};//piosenka przestała grac na kliencie
     static final int sizeOfPackage = 500;
 
     public static boolean checkResponse(byte[] expected, byte [] response){

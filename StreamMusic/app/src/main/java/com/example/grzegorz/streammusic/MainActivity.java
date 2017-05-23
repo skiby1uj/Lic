@@ -32,6 +32,7 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
     int lastSelectionPositionMac = -1;
     Context context = null;
     ListView listViewMusic = null;
+    ListDeviceConnectAdapter listDeviceConnectAdapter;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -97,7 +98,6 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
 
 
     public void showSearchDeviceBLuetooth(LinkedList<ListDeviceConnectRow> list){
-        ListDeviceConnectAdapter listDeviceConnectAdapter;
         ContentResolver cr = this.getContentResolver();
         ListView listV = (ListView)findViewById(R.id.listViewMusic);
         listDeviceConnectAdapter = new ListDeviceConnectAdapter(this, R.layout.row_bluetooth_server_adress, list);
@@ -172,9 +172,7 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
                 BluetoothDevice bluetoothDevice = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
                 listDeviceConnectRows.add(new ListDeviceConnectRow(bluetoothDevice.getName(), bluetoothDevice.getAddress()));
                 Log.e("INFO", "znaleziono urządzenie: " + bluetoothDevice.getName() + " " + bluetoothDevice.getAddress());
-                if (chOdbieraj.isChecked() && bPlay.isEnabled()){
-                    showSearchDeviceBLuetooth(listDeviceConnectRows);
-                }
+                listDeviceConnectAdapter.notifyDataSetChanged();
             }
         }
     };
@@ -196,7 +194,6 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
                 TextView w = (TextView) parent.getChildAt(position).findViewById(R.id.textAdressDevice);
                 adressMac = w.getText().toString();
             }
-            //TODO ZROBIC KOLOROWANIE WYBRANEGO ELEMENTU I PRZEKAZYWANIE GO DO KONSTRUKTORÓW
             Toast.makeText(context, "Wybrano " + listDeviceConnectRows.get(position).getName(), Toast.LENGTH_LONG).show();
 
     }
