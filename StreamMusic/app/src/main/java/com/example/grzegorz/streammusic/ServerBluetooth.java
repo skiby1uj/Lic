@@ -26,10 +26,6 @@ import java.io.OutputStream;
 import java.util.LinkedList;
 import java.util.UUID;
 
-/**
- * Created by grzegorz on 23.03.17.
- */
-
 public class ServerBluetooth extends Thread implements AdapterView.OnItemClickListener {
     private BluetoothSocket socket;
     private Context context;
@@ -41,6 +37,7 @@ public class ServerBluetooth extends Thread implements AdapterView.OnItemClickLi
     private ObjectInputStream ooi;
     private FileInputStream inputStream;
     private ListMusicAdapter listMusicAdapter;
+
 
     public ServerBluetooth(Context context){
         Log.i("INFO", "Poczatek konstruktora ServerBluetooth");
@@ -146,6 +143,34 @@ public class ServerBluetooth extends Thread implements AdapterView.OnItemClickLi
         out.close();
     }
 
+    private int getSizeTag(FileInputStream inputStream){
+        byte[] buf = new byte[3];
+        String hex = "";
+        try {
+            inputStream.read(buf);
+            if ( buf[0] == 73 && buf[1] == 68 && buf[2] == 51 )//ID3
+            {
+                inputStream.skip(3);
+                buf = new byte[4];
+                inputStream.read(buf);
+            }
+            else
+                return 0;
+            for ( int i = 0; i < 4; i++)
+                hex += Integer.toHexString(buf[i]);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        int out = 0, mask = 0x7F000000;
+        int doc = Integer.parseInt(hex.trim(), 16 );
+        while (mask > 0 ) {
+            out >>= 1;
+            out |= doc & mask;
+            mask >>= 8;
+        }
+        return out;
+    }
+
     @Override
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 
@@ -169,7 +194,6 @@ public class ServerBluetooth extends Thread implements AdapterView.OnItemClickLi
                 listMusicAdapter.getItem(position).setRaw(R.drawable.pause);
                 listMusicAdapter.notifyDataSetChanged();
                 this.path = listMusicAdapter.getItem(position).getPath();
-
                 try {
                     inputStream = new FileInputStream(new File(path));
                 } catch (FileNotFoundException e) {
@@ -262,11 +286,12 @@ public class ServerBluetooth extends Thread implements AdapterView.OnItemClickLi
                     byte[] buf = new byte[1024];
                     byte[] odpByte = null;
                     int licz = 0;
+                    Log.i("INFO", "Pominieto " + inputStream.skip(getSizeTag(inputStream)) + "byte");
                     while ((len = inputStream.read(buf)) != -1 && !ComunicationClientServer.checkResponse(ComunicationClientServer.changeSong, comunicationWithClient.status)) {
                         licz++;
                         oos.write(buf, 0, len);
                         Log.i("loop", licz+"");
-                        if (licz == 500){
+                        if (licz == ComunicationClientServer.sizeOfPackage){
                             licz = 0;
                             Log.i("INFO", "Zerujemy licz i wysylamy zaraz");
                             oos.flush();

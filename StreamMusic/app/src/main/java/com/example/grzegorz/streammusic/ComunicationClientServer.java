@@ -1,7 +1,5 @@
 package com.example.grzegorz.streammusic;
 
-import android.util.Log;
-
 /**
  * Created by grzegorz on 18.04.17.
  */
@@ -14,8 +12,8 @@ public class ComunicationClientServer{
     static final byte[] changeSong = {0, 1, 1};// zmiana piosenki, nie wysylaj wiecej obecnej
     static final byte[] play = {1, 0, 0};//muzyka gra
     static final byte[] lastPackage = {1, 0, 1};//ostatnia paczka z piosenka
-    static final byte[] musicFinish = {1, 1, 0};//piosenka przestała grac na kliencie
-    static final int sizeOfPackage = 500;
+//    static final byte[] musicFinish = {1, 1, 0};//piosenka przestała grac na kliencie
+    static final int sizeOfPackage = 200;
 
     public static boolean checkResponse(byte[] expected, byte [] response){
         if (response == null){

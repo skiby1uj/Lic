@@ -50,6 +50,9 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
         chWysylaj.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if (chOdbieraj.isChecked()){
+                    chOdbieraj.setChecked(false);
+                }
                 bPlay.setEnabled(true);
                 showSearchDeviceBLuetooth(new LinkedList<ListDeviceConnectRow>());
             }
@@ -59,6 +62,9 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
             @Override
             public void onClick(View v) {
                 wykryjInne();
+                if (chWysylaj.isChecked()){
+                    chWysylaj.setChecked(false);
+                }
                 bPlay.setEnabled(false);
                 showSearchDeviceBLuetooth(listDeviceConnectRows);
             }
@@ -95,8 +101,6 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
         });
     }
 
-
-
     public void showSearchDeviceBLuetooth(LinkedList<ListDeviceConnectRow> list){
         ContentResolver cr = this.getContentResolver();
         ListView listV = (ListView)findViewById(R.id.listViewMusic);
@@ -104,32 +108,6 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
         listV.setAdapter(listDeviceConnectAdapter);
         listV.setOnItemClickListener(this);
     }
-
-    /*public Dialog onCreateDialog(Bundle savedInstanceState, final View.OnClickListener context) {
-        // Use the Builder class for convenient dialog construction
-        AlertDialog.Builder builder = new AlertDialog.Builder(this.context);
-        builder.setMessage("W jaki sposób ma działać urządzenie?")
-                .setPositiveButton("Wysyłać", new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-                        // FIRE ZE MISSILES!
-//                        showMusic();
-//                        isServer = true;
-//                        chWysylaj.setChecked(true);
-//                        runServerOrClient();
-                    }
-                })
-                .setNegativeButton("Odbierać", new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-                        // User cancelled the dialog
-//                        isServer = false;
-//                        chOdbieraj.setChecked(true);
-//                        runServerOrClient();
-                    }
-                });
-        // Create the AlertDialog object and return it
-
-        return builder.create();
-    }*/
 
     void runBluetooth(){
         BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -146,10 +124,12 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
     }
 
     public void wykryjInne(){
+        Log.i("INFO", "Probuje wykryc");
         IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
         this.registerReceiver(odbiorca, filter);
         BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         bluetoothAdapter.startDiscovery();
+        Log.i("INFO", "Koniec wykrywania");
     }
 
     public void chWysylajClick(View v){
